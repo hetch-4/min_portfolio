@@ -38,39 +38,120 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
 
 // Initialize EmailJS
 (function() {
-    emailjs.init("YOUR_PUBLIC_KEY"); // Replace with your EmailJS public key
+    try {
+        emailjs.init("FZ_VoS-MNQLza6RDa"); // You need to replace this with your actual public key from EmailJS
+        console.log("EmailJS initialized successfully");
+    } catch (error) {
+        console.error("Failed to initialize EmailJS:", error);
+        showNotification("Email service initialization failed", "error");
+    }
 })();
 
-// Form submission handling
-const contactForm = document.getElementById('contactForm');
-if (contactForm) {
-    contactForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        
-        // Show loading state
-        const submitButton = contactForm.querySelector('button[type="submit"]');
-        const originalText = submitButton.textContent;
-        submitButton.textContent = 'Sending...';
-        submitButton.disabled = true;
-
-        // Send email using EmailJS
-        emailjs.sendForm('YOUR_SERVICE_ID', 'YOUR_TEMPLATE_ID', contactForm)
-            .then(function() {
-                // Show success message
-                alert('Thank you for your message! I will get back to you soon.');
-                contactForm.reset();
-            }, function(error) {
-                // Show error message
-                alert('Sorry, there was an error sending your message. Please try again later.');
-                console.error('EmailJS error:', error);
-            })
-            .finally(function() {
-                // Reset button state
-                submitButton.textContent = originalText;
-                submitButton.disabled = false;
-            });
-    });
+// Utility function to show notifications
+function showNotification(message, type = "success") {
+    const notification = document.getElementById('notification');
+    notification.textContent = message;
+    notification.className = `notification ${type} show`;
+    
+    // Hide notification after 5 seconds
+    setTimeout(() => {
+        notification.classList.remove('show');
+    }, 5000);
 }
+
+// Form validation function
+function validateForm(formData) {
+    const errors = [];
+    
+    // Name validation
+    const name = formData.get('user_name');
+    if (!/^[A-Za-z ]{2,50}$/.test(name)) {
+        errors.push("Name should be between 2 and 50 characters and contain only letters");
+    }
+    
+    // Email validation
+    const email = formData.get('user_email');
+    if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email)) {
+        errors.push("Please enter a valid email address");
+    }
+    
+    // Message validation
+    const message = formData.get('message');
+    if (message.length < 10 || message.length > 500) {
+        errors.push("Message should be between 10 and 500 characters");
+    }
+    
+    return errors;
+}
+
+// Handle form submission
+document.getElementById('contactForm').addEventListener('submit', async function(event) {
+    event.preventDefault();
+    
+    // Get form data
+    const formData = new FormData(this);
+    
+    // Validate form
+    const errors = validateForm(formData);
+    if (errors.length > 0) {
+        errors.forEach(error => showNotification(error, "error"));
+        return;
+    }
+    
+    // Show sending state
+    const submitButton = this.querySelector('button[type="submit"]');
+    submitButton.classList.add('sending');
+    const originalText = submitButton.textContent;
+    submitButton.textContent = 'Sending...';
+    submitButton.disabled = true;
+
+    // Prepare template parameters with sanitized data
+    const templateParams = {
+        from_name: formData.get('user_name').trim(),
+        from_email: formData.get('user_email').trim(),
+        message: formData.get('message').trim(),
+        to_email: 'Humphreydola@gmail.com',
+        timestamp: new Date().toISOString()
+    };
+
+    try {
+        // Show loading notification
+        showNotification("Sending your message...", "loading");
+        
+        // Send email using EmailJS
+        const response = await emailjs.send(
+            'service_nz6m5mn',
+            'template_zeargzf',
+            templateParams
+        );
+
+        console.log("Email sent successfully:", response);
+        showNotification("Message sent successfully! We'll get back to you soon.", "success");
+        this.reset();
+        
+    } catch (error) {
+        console.error("Failed to send email:", error);
+        showNotification("Failed to send message. Please try again later.", "error");
+        
+    } finally {
+        // Reset button state
+        submitButton.classList.remove('sending');
+        submitButton.textContent = originalText;
+        submitButton.disabled = false;
+    }
+});
+
+// Real-time form validation
+document.querySelectorAll('.form-group input, .form-group textarea').forEach(input => {
+    input.addEventListener('input', function() {
+        const formGroup = this.closest('.form-group');
+        if (this.validity.valid) {
+            formGroup.classList.remove('error');
+        } else {
+            formGroup.classList.add('error');
+        }
+    });
+});
 
 // Add scroll reveal animations
 const revealElements = document.querySelectorAll('.project-card, .about-content, .contact-content');
